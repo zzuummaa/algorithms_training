@@ -20,7 +20,7 @@
 #include <set>
 #include <iterator>
 #include <cassert>
-#include <cmath>
+#include <thread>
 #include <chrono>
 #include <random>
 #include <algorithm>
@@ -91,25 +91,22 @@ bool is_local_minimum(const matrix<T>& m, size_t x, size_t y) {
 }
 
 template<typename T>
-std::pair<size_t , size_t> find_local_minimum(const matrix<T>& m, rectangle rect) {
+std::pair<size_t , size_t> find_local_minimum_internal(const matrix<T>& m, rectangle rect, std::pair<size_t, size_t> last_min) {
 	if ((rect.right - rect.left) != (rect.bottom - rect.top)) {
 		std::cout << m << std::endl;
 		assert((rect.right - rect.left) == (rect.bottom - rect.top));
 	}
 
 	if (rect.n() == 1) return std::make_pair(rect.left, rect.top);
-	if (rect.n() == 2) {
-		size_t min_y = rect.top;
-		size_t min_x = rect.left;
+	if (rect.n() < 3) {
 		for (size_t x = rect.left; x < rect.right; x++) {
 			for (size_t y = rect.top; y < rect.bottom; y++) {
-				if (m[y][x] < m[min_y][min_x]) {
-					min_x = x;
-					min_y = y;
-				}
+				if (is_local_minimum(m, x, y)) return std::make_pair(x, y);
 			}
 		}
-		return std::make_pair(min_x, min_y);
+		std::cout << "no local minimum in " << std::make_pair(rect.left, rect.top) << " " << std::make_pair(rect.right, rect.bottom) << std::endl;
+		std::cout << m << std::endl;
+		assert(false);
 	}
 
 	size_t min_y = rect.top;
@@ -125,11 +122,21 @@ std::pair<size_t , size_t> find_local_minimum(const matrix<T>& m, rectangle rect
 //	if (is_local_minimum(m, mid_x, min_y)) return std::make_pair(mid_x, min_y);
 //	if (is_local_minimum(m, mid_x, rect.bottom - 1)) return std::make_pair(mid_x, rect.bottom - 1);
 
-	if (m[min_y][mid_x - 1] < m[min_y][mid_x + 1]) {
-		rect.right = mid_x;
+	if (m[last_min.second][last_min.first] < m[min_y][mid_x]) {
+		if (last_min.first < mid_x) {
+			rect.right = mid_x;
+		} else {
+			rect.left = mid_x + (rect.right - rect.left) % 2;
+		}
 	} else {
-		rect.left = mid_x + (rect.right - rect.left) % 2;
+		last_min = std::make_pair(mid_x, min_y);
+		if (m[min_y][mid_x - 1] < m[min_y][mid_x + 1]) {
+			rect.right = mid_x;
+		} else {
+			rect.left = mid_x + (rect.right - rect.left) % 2;
+		}
 	}
+
 
 	size_t min_x = rect.left;
 	size_t mid_y = rect.top + (rect.bottom - rect.top) / 2;
@@ -140,17 +147,32 @@ std::pair<size_t , size_t> find_local_minimum(const matrix<T>& m, rectangle rect
 		}
 	}
 
+	if (m[last_min.second][last_min.first] < m[mid_y][min_x]) {
+		if (last_min.second < mid_y) {
+			rect.bottom = mid_y;
+		} else {
+			rect.top = mid_y + (rect.bottom - rect.top) % 2;
+		}
+	} else {
+		last_min = std::make_pair(min_x, mid_y);
+		if (m[mid_y + 1][min_x] < m[mid_y - 1][min_x]) {
+			rect.top = mid_y + (rect.bottom - rect.top) % 2;
+		} else {
+			rect.bottom = mid_y;
+		}
+	}
+
 //	if (is_local_minimum(m, rect.left, mid_y)) return std::make_pair(rect.left, mid_y);
 //	if (is_local_minimum(m, min_x, mid_y)) return std::make_pair(min_x, mid_y);
 //	if (is_local_minimum(m, rect.right - 1, mid_y)) return std::make_pair(rect.right - 1, mid_y);
 
-	if (m[mid_y + 1][min_x] < m[mid_y - 1][min_x]) {
-		rect.top = mid_y + (rect.bottom - rect.top) % 2;
-	} else {
-		rect.bottom = mid_y;
-	}
+	return find_local_minimum_internal(m, rect, last_min);
+}
 
-	return find_local_minimum(m, rect);
+template<typename T>
+std::pair<size_t , size_t> find_local_minimum(const matrix<T>& m) {
+	auto rect = matrix_dimension(m);
+	return find_local_minimum_internal(m, rect, std::make_pair(rect.top, rect.left + (rect.right - rect.left) / 2));
 }
 
 template<typename T>
@@ -166,7 +188,7 @@ std::set<std::pair<size_t , size_t>> find_local_minimums_simple(const matrix<T>&
 
 bool test_find_local_minimums(const matrix<int>& m) {
 	auto local_minimums_refer = find_local_minimums_simple(m);
-	auto local_minimum = find_local_minimum(m, matrix_dimension(m));
+	auto local_minimum = find_local_minimum(m);
 
 	if (local_minimums_refer.find(local_minimum) == local_minimums_refer.end()) {
 		std::cout << "invalid local minimum " << local_minimum << std::endl;
@@ -233,6 +255,28 @@ int main() {
 	};
 	assert(test_find_local_minimums(a5));
 
+	matrix<int> a6 = {
+			{ 21,   6,      30,     23,     15,     28,     },
+			{ 5,    8,      17,     31,     12,     2,      },
+			{ 27,   7,      19,     26,     1,      11,     },
+			{ 32,   16,     33,     22,     10,     0,      },
+			{ 35,   24,     34,     20,     14,     9,      },
+			{ 3,    29,     4,      13,     18,     25,     },
+	};
+	assert(test_find_local_minimums(a6));
+
+	matrix<int> a8 = {
+			{ 30,   36,     29,     7,      37,     46,     44,     62,     },
+			{ 0,    15,     14,     31,     55,     6,      42,     40,     },
+			{ 54,   38,     51,     63,     9,      5,      28,     61,     },
+			{ 34,   25,     53,     43,     45,     49,     26,     22,     },
+			{ 21,   2,      1,      8,      60,     16,     47,     17,     },
+			{ 41,   32,     57,     50,     39,     13,     20,     3,      },
+			{ 33,   18,     27,     4,      59,     10,     52,     19,     },
+			{ 56,   35,     23,     11,     24,     12,     58,     48,     },
+	};
+	assert(test_find_local_minimums(a8));
+
 	matrix<int> a9 {
 			{ 62,   4,      12,     22,     5,      2,      29,     61,     42,     },
 			{ 54,   70,     37,     55,     38,     75,     7,      50,     48,     },
@@ -246,10 +290,15 @@ int main() {
 	};
 	assert(test_find_local_minimums(a9));
 
-	for (int i = 0; i < 100; i++) {
-		for (int j = 2; j < 300; j++) {
-			assert(test_find_local_minimums(random_matrix(j)));
-		}
+	std::vector<std::thread> thread_pool(std::thread::hardware_concurrency());
+	for (auto& it: thread_pool) {
+		it = std::thread([]{
+			 for (int i = 0; i < 100 * 1000 / std::thread::hardware_concurrency(); i++) {
+				 for (int j = 2; j < 30; j++) {
+					 assert(test_find_local_minimums(random_matrix(j)));
+				 }
+			 }
+		});
 	}
-
+	std::for_each(thread_pool.begin(), thread_pool.end(), [](auto& it){ it.join(); });
 }
