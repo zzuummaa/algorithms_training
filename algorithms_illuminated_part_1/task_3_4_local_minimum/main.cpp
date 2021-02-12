@@ -21,12 +21,15 @@
 #include <iterator>
 #include <cassert>
 #include <thread>
+#include <mutex>
 #include <chrono>
 #include <random>
 #include <algorithm>
 
 template <typename T>
 using matrix = std::vector<std::vector<T>>;
+
+std::mutex cout_mutex;
 
 struct rectangle {
 	size_t left;
@@ -93,6 +96,7 @@ bool is_local_minimum(const matrix<T>& m, size_t x, size_t y) {
 template<typename T>
 std::pair<size_t , size_t> find_local_minimum_internal(const matrix<T>& m, rectangle rect, std::pair<size_t, size_t> last_min) {
 	if ((rect.right - rect.left) != (rect.bottom - rect.top)) {
+		std::lock_guard<std::mutex> lc(cout_mutex);
 		std::cout << m << std::endl;
 		assert((rect.right - rect.left) == (rect.bottom - rect.top));
 	}
@@ -104,6 +108,7 @@ std::pair<size_t , size_t> find_local_minimum_internal(const matrix<T>& m, recta
 				if (is_local_minimum(m, x, y)) return std::make_pair(x, y);
 			}
 		}
+		std::lock_guard<std::mutex> lc(cout_mutex);
 		std::cout << "no local minimum in " << std::make_pair(rect.left, rect.top) << " " << std::make_pair(rect.right, rect.bottom) << std::endl;
 		std::cout << m << std::endl;
 		assert(false);
@@ -191,6 +196,7 @@ bool test_find_local_minimums(const matrix<int>& m) {
 	auto local_minimum = find_local_minimum(m);
 
 	if (local_minimums_refer.find(local_minimum) == local_minimums_refer.end()) {
+		std::lock_guard<std::mutex> lc(cout_mutex);
 		std::cout << "invalid local minimum " << local_minimum << std::endl;
 		std::cout << "not in: [";
 		for (const auto& it: local_minimums_refer) std::cout << it << ", ";
