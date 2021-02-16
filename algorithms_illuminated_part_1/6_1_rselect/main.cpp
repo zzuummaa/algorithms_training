@@ -18,15 +18,11 @@ RandomAccessIterator rselect(RandomAccessIterator first, RandomAccessIterator la
 	}
 
 	auto left = first + 1;
-	auto right = first + 1;
 
 	for (auto it = first + 1; it < last; it++) {
 		if (*it < *first) {
 			std::swap(*left, *it);
 			left++;
-			right++;
-		} else {
-			right++;
 		}
 	}
 	left--;

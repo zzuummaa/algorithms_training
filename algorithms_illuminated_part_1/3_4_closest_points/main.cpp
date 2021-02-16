@@ -23,6 +23,15 @@ struct point {
 	static float dist_square(const std::optional<point_pair>& pair) {
 		return std::numeric_limits<typeof(point::x)>::max();
 	}
+
+	bool operator==(const point &rhs) const {
+		return x == rhs.x &&
+			   y == rhs.y;
+	}
+
+	bool operator!=(const point &rhs) const {
+		return !(rhs == *this);
+	}
 };
 
 template<typename RandomAccessIterator>
@@ -90,8 +99,46 @@ std::optional<point_pair> closest_pair(RandomAccessIterator first, RandomAccessI
 	return closest_pair_internal(sorted_x.begin(), sorted_x.end(), sorted_y.begin());
 }
 
+template<typename RandomAccessIterator>
+std::optional<point_pair> closest_pair_simple(RandomAccessIterator first, RandomAccessIterator last) {
+	std::optional<point_pair> nearest_points;
+	float min_dist = std::numeric_limits<float>::max();
+
+	for (auto left = first; left < last; left++) {
+		for (auto right = left + 1; right < last; right++) {
+			auto dist = left->dist_square(*right);
+			if (dist < min_dist) {
+				nearest_points = std::make_pair(*left, *right);
+				min_dist = dist;
+			}
+		}
+	}
+	return nearest_points;
+}
+
+template<typename Container>
+bool test_closest_pair(const Container& container) {
+	auto nearest_refer = closest_pair_simple(container.begin(), container.end());
+	auto nearest = closest_pair(container.begin(), container.end());
+	if (nearest != nearest_refer) {
+		std::cout << "nearest != nearest_refer" << std::endl;
+		return false;
+	}
+	return true;
+}
+
 int main() {
 	std::vector<point> a;
-	closest_pair(a.begin(), a.end());
+	assert(test_closest_pair(a));
+
+	std::vector<point> b = { { 0, 1 }, { 0, 2 }, { 1, 1 } };
+	assert(test_closest_pair(b));
+
+	std::vector<point> c = { { 0, 1 }, { 1, 1 } };
+	assert(test_closest_pair(c));
+
+	std::vector<point> d = { { 0, 1 }, { 0, 2 }, { 1, 1 } };
+	assert(test_closest_pair(d));
+
 	return 0;
 }
