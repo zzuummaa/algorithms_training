@@ -1,4 +1,8 @@
+#include <string>
 #include <iostream>
+#include <fstream>
+#include <dirent.h>
+#include <sys/types.h>
 #include <vector>
 #include <cassert>
 #include <algorithm>
@@ -65,7 +69,20 @@ std::vector<std::vector<size_t>> scc(const std::vector<std::vector<size_t>>& adj
 	return components;
 }
 
+std::vector<std::string> list_dir(const char *path) {
+	std::vector<std::string> file_names;
+	struct dirent *entry;
+	DIR *dir = opendir(path);
 
+	if (dir == NULL) {
+		return file_names;
+	}
+	while ((entry = readdir(dir)) != NULL) {
+		file_names.emplace_back(entry->d_name);
+	}
+	closedir(dir);
+	return file_names;
+}
 
 int main() {
 	/**
@@ -96,4 +113,37 @@ int main() {
 	assert((components[1] == std::vector<size_t>{ 2, 4, 7, 9 }));
 	assert((components[2] == std::vector<size_t>{ 6, 8, 10   }));
 	assert((components[3] == std::vector<size_t>{ 11         }));
+
+	for (const auto & in_file_name : list_dir("./")) {
+		if (in_file_name.rfind("input_mostlyCycles", 0) != 0) continue;
+		std::cout << in_file_name << std::endl;
+
+		std::ifstream is_in(in_file_name);
+
+		std::vector<std::vector<size_t>> adj_list;
+		size_t v, w;
+		while (is_in >> v >> w) {
+			if (adj_list.size() < v) adj_list.resize(v);
+			if (adj_list.size() < w) adj_list.resize(w);
+			adj_list[v - 1].emplace_back(w - 1);
+		}
+
+		components = scc(adj_list);
+		std::sort(components.begin(), components.end(), [](auto& a, auto& b){ return a.size() > b.size(); });
+
+		std::string id(in_file_name.begin() + strlen("input_mostlyCycles_"), in_file_name.end() - strlen(".txt"));
+		std::string out_file_name = "output_mostlyCycles_" + id + ".txt";
+
+		std::ifstream is_out(out_file_name);
+		std::vector<size_t> counts_refer;
+		size_t count;
+		while (is_out >> count) counts_refer.emplace_back(count);
+
+		std::vector<size_t> counts;
+		for (size_t i = 0; i < std::min(components.size(), counts_refer.size()); i++) {
+			counts.emplace_back(components[i].size());
+		}
+
+		assert(counts == counts_refer);
+	}
 }
