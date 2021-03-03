@@ -17,7 +17,7 @@ bool make_testcase_streams(testcase_streams& streams, std::string_view n) {
 	auto id_pos_end = in_file_name.size() - strlen(".txt");
 	if (in_file_name.find(".txt", id_pos_end) == std::string::npos) return false;
 
-	std::string out_file_name = "output" + std::string(in_file_name.begin() + id_pos_start, in_file_name.begin() + id_pos_end) + ".txt";
+	std::string out_file_name = "output_" + std::string(in_file_name.begin() + id_pos_start, in_file_name.begin() + id_pos_end) + ".txt";
 	streams.out = std::ifstream(out_file_name);
 
 	return true;
