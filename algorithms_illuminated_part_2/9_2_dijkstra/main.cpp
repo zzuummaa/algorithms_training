@@ -53,19 +53,18 @@ int main() {
 
 		auto adj_list = collect_adj_list<weighted_edge>(streams.in);
 		auto distances = dijkstra(adj_list, 0);
-		std::sort(distances.begin(), distances.end(), [](auto a, auto b){
-			if (a == INFINITY_DISTANCE) a = 0;
-			if (b == INFINITY_DISTANCE) b = 0;
-			return a > b;
-		});
 
 		auto distances_ref = collect_sequence<size_t>(streams.out);
+		std::vector<size_t> suitable_vertexes = { 7, 37, 59, 82, 99, 115, 133, 165, 188, 197 };
 //		std::copy(distances_ref.begin(), distances_ref.end(), std::ostream_iterator<size_t>(std::cout, " "));
 		assert(
 			std::equal(
-				distances.begin(),
-				distances.begin() + std::min(distances.size(), distances_ref.size()),
-				distances_ref.begin()
+				suitable_vertexes.begin(),
+				suitable_vertexes.begin() + std::min(std::min(distances.size(), distances_ref.size()), suitable_vertexes.size()),
+				distances_ref.begin(),
+				[&](auto a, auto b) {
+					return distances[a - 1] == b;
+				}
 			)
 		);
 	}
