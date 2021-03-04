@@ -21,7 +21,7 @@ std::vector<size_t> dijkstra(const std::vector<std::vector<weighted_edge>>& adj_
 	while (adjacent.size() < adj_list.size()) {
 		size_t w_min = adj_list.size();
 		size_t min_dist = INFINITY_DISTANCE;
-		for (size_t v = 0; v < adjacent.size(); v++) {
+		for (auto v: adjacent) {
 			for (size_t i = 0; i < adj_list[v].size(); i++) {
 				auto w = adj_list[v][i].v;
 				if (is_visited[w]) continue;
@@ -46,7 +46,8 @@ std::vector<size_t> dijkstra(const std::vector<std::vector<weighted_edge>>& adj_
 
 int main() {
 	for (const auto & in_file_name : testcase_iterator("./")) {
-		std::cout << in_file_name << std::endl;
+		std::cout << in_file_name;
+		std::flush(std::cout);
 
 		testcase_streams streams;
 		make_testcase_streams(streams, in_file_name);
@@ -56,16 +57,16 @@ int main() {
 
 		auto distances_ref = collect_sequence<size_t>(streams.out);
 		std::vector<size_t> suitable_vertexes = { 7, 37, 59, 82, 99, 115, 133, 165, 188, 197 };
-//		std::copy(distances_ref.begin(), distances_ref.end(), std::ostream_iterator<size_t>(std::cout, " "));
-		assert(
-			std::equal(
-				suitable_vertexes.begin(),
-				suitable_vertexes.begin() + std::min(std::min(distances.size(), distances_ref.size()), suitable_vertexes.size()),
-				distances_ref.begin(),
-				[&](auto a, auto b) {
-					return distances[a - 1] == b;
-				}
-			)
+
+		bool is_ok = std::equal(
+			suitable_vertexes.begin(),
+			suitable_vertexes.begin() + std::min(std::min(distances.size(), distances_ref.size()), suitable_vertexes.size()),
+			distances_ref.begin(),
+			[&](auto a, auto b) {
+				return distances[a - 1] == b;
+			}
 		);
+
+		std::cout << " - " << (is_ok ? "ok" : "failed") << std::endl;
 	}
 }

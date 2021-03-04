@@ -10,8 +10,8 @@ std::istream &operator>>(std::istream &is, weighted_edge &we) {
 
 	std::istringstream iss(str);
 	iss >> we.v;
-
 	is >> we.l;
+	we.v--;
 
 	return is;
 }
