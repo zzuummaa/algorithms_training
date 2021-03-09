@@ -76,9 +76,9 @@ std::vector<std::vector<T>> collect_adj_list(std::istream &is) {
 }
 
 template<typename T>
-std::vector<T> collect_sequence(std::istream &is) {
+std::vector<T> collect_sequence(std::istream &is, char delim = ',') {
 	std::vector<T> sequence;
-	std::copy(csv_istream_iterator<T>(is), csv_istream_iterator<T>(), std::back_inserter(sequence));
+	std::copy(csv_istream_iterator<T>(is, delim), csv_istream_iterator<T>(), std::back_inserter(sequence));
 	return sequence;
 }
 
