@@ -2,6 +2,10 @@
 #include <random>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
+
+unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+std::default_random_engine gen(seed);
 
 template<typename RandomAccessIterator>
 RandomAccessIterator rselect(RandomAccessIterator first, RandomAccessIterator last, size_t n_min_idx) {
@@ -12,8 +16,7 @@ RandomAccessIterator rselect(RandomAccessIterator first, RandomAccessIterator la
 	}
 
 	if (last - first > 10) {
-		std::default_random_engine gen;
-		std::uniform_int_distribution<size_t> distrib(0, last - first);
+		std::uniform_int_distribution<size_t> distrib(0, last - first - 1);
 		std::swap(*first, *(first + distrib(gen)));
 	}
 
