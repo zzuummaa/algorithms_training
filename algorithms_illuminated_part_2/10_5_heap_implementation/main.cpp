@@ -4,7 +4,7 @@
 #include <cassert>
 #include <random>
 #include <chrono>
-#include <algorithm>
+#include <testcase_random.h>
 
 template <typename T, typename Compare = std::less<>>
 class priority_queue {
@@ -138,17 +138,6 @@ bool test_priority_queue(const Container& container) {
 	}
 
 	return true;
-}
-
-template<typename T>
-std::vector<T> random_vector(size_t n) {
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	std::default_random_engine gen(seed);
-	std::uniform_int_distribution<T> distrib;
-
-	std::vector<T> out(n);
-	std::generate(out.begin(), out.end(), [&](){ return distrib(gen); });
-	return out;
 }
 
 int main() {
