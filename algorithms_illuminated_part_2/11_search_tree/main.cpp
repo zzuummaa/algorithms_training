@@ -13,6 +13,29 @@ struct tree_node {
 
 	tree_node(): left(nullptr), right(nullptr), parent(nullptr), value(0) {}
 
+	void swap(tree_node<T>* node) {
+		if (node->left == this) {
+			node->left = left;
+			left = node;
+		} else {
+			std::swap(node->left, left);
+		}
+
+		if (node->right == this) {
+			node->right = right;
+			right = node;
+		} else {
+			std::swap(node->right, right);
+		}
+
+		if (node->parent == this) {
+			node->parent = parent;
+			parent = node;
+		} else {
+			std::swap(node->parent, parent);
+		}
+	}
+
 	void set_left(tree_node<T>* node) {
 		node->parent = this;
 		left = node;
@@ -120,6 +143,10 @@ class tree_set {
 		return &nodes.back();
 	}
 
+	void dealloc_node(tree_node<T>* node) {
+		// TODO
+	}
+
 	inline tree_node<T>* top() {
 		return top_node;
 	}
@@ -180,6 +207,33 @@ public:
 	template< class InputIt>
 	void insert(InputIt first, InputIt last) {
 		for (auto it = first; it != last; it++) insert(*it);
+	}
+
+	iterator erase(const T& key) {
+		auto it = find(key);
+		if (it == end()) return it;
+
+		// TODO
+//		if (it->left != nullptr) {
+//			if (it->right != nullptr) {
+//				auto successor = it->successor();
+//				it->swap(*successor);
+//				if (*it == top_node) {
+//					top_node = *successor;
+//				} else {
+//					it->parent->right = it->left;
+//				}
+//				dealloc_node(it);
+//				return successor;
+//			} else {
+//				if (*it == top_node) top_node = it->left;
+//				return iterator();
+//			}
+//		} else {
+//			if (it->right != nullptr) {
+//				if (it->parent == nullptr)
+//			}
+//		}
 	}
 };
 
