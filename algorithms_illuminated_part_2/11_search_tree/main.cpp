@@ -98,9 +98,14 @@ struct tree_node {
 };
 
 template <typename T>
+class tree_set;
+
+template <typename T>
 class tree_node_iterator : public std::iterator<std::forward_iterator_tag, T> {
 	tree_node<T>* cur;
 public:
+	friend class tree_set<T>;
+
 	tree_node_iterator() : cur(nullptr) {}
 	explicit tree_node_iterator(tree_node<T>* cur) : cur(cur) {}
 
@@ -143,8 +148,10 @@ class tree_set {
 		return &nodes.back();
 	}
 
-	void dealloc_node(tree_node<T>* node) {
-		// TODO
+	void dealloc_node(tree_node<T>* np) {
+		*np = tree_node<T>();
+		np->swap(&nodes.back());
+		nodes.pop_back();
 	}
 
 	inline tree_node<T>* top() {
@@ -211,41 +218,52 @@ public:
 
 	iterator erase(const T& key) {
 		auto it = find(key);
-		if (it == end()) return it;
+		return erase(it);
+	}
 
-		// TODO
-//		if (it->left != nullptr) {
-//			if (it->right != nullptr) {
-//				auto successor = it->successor();
-//				it->swap(*successor);
-//				if (*it == top_node) {
-//					top_node = *successor;
-//				} else {
-//					it->parent->right = it->left;
-//				}
-//				dealloc_node(it);
-//				return successor;
-//			} else {
-//				if (*it == top_node) top_node = it->left;
-//				return iterator();
-//			}
-//		} else {
-//			if (it->right != nullptr) {
-//				if (it->parent == nullptr)
-//			}
-//		}
+	iterator erase(iterator pos) {
+		if (pos == end()) return pos;
+
+		auto it = pos.cur;
+		auto successor = it->successor();
+
+		if (it->left != nullptr && it->right != nullptr) {
+			it->swap(successor);
+		}
+
+		if (it->parent == nullptr) {
+			top_node = successor == nullptr ? it->left : successor;
+		} else {
+			auto child = it->parent == it->parent->left ? &it->parent->left : &it->parent->right;
+			*child = it->left != nullptr ? it->left : it->right;
+		}
+
+		dealloc_node(it);
+		return iterator(successor);
 	}
 };
 
 template <typename T>
-bool test_tree_set(const std::vector<T>& container) {
+bool test_tree_set(const std::vector<T>& container_insert, const std::vector<T>& container_erase) {
 	std::set<T> ref_sequence;
-	ref_sequence.insert(container.begin(), container.end());
-	tree_set<T> sequence(container.size());
-	sequence.insert(container.begin(), container.end());
+	ref_sequence.insert(container_insert.begin(), container_insert.end());
+	tree_set<T> sequence(container_insert.size());
+	sequence.insert(container_insert.begin(), container_insert.end());
 
 	if (!std::equal(ref_sequence.begin(), ref_sequence.end(), sequence.begin(), sequence.end())) {
-		std::cout << "invalid sequence iterator" << std::endl;
+		std::cout << "invalid insertion or iteration" << std::endl;
+		return false;
+	}
+
+	if (container_erase.empty()) return true;
+
+	for (auto& it: container_erase) {
+		ref_sequence.erase(it);
+		sequence.erase(it);
+	}
+
+	if (!std::equal(ref_sequence.begin(), ref_sequence.end(), sequence.begin(), sequence.end())) {
+		std::cout << "invalid erasing" << std::endl;
 		return false;
 	}
 
@@ -253,11 +271,11 @@ bool test_tree_set(const std::vector<T>& container) {
 }
 
 int main() {
-	assert(test_tree_set(std::vector<int> { 0    }));
-	assert(test_tree_set(std::vector<int> { 0, 1 }));
-	assert(test_tree_set(std::vector<int> { 1, 0 }));
+	assert(test_tree_set<int>({ 0    }, {         }));
+	assert(test_tree_set<int>({ 0, 1 }, { 2, 1, 0 }));
+	assert(test_tree_set<int>({ 1, 0 }, { 1, 2, 0 }));
 
 	for (size_t i = 0; i < 10 * 1000; i += 100) {
-		assert(test_tree_set(random_vector<int>(i)));
+		assert(test_tree_set(random_vector<int>(i), random_vector<int>(i)));
 	}
 }
