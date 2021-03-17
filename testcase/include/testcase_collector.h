@@ -82,4 +82,11 @@ std::vector<T> collect_sequence(std::istream &is, char delim = ',') {
 	return sequence;
 }
 
+template<typename T>
+T collect_val(std::istream &is) {
+	T val;
+	is >> val;
+	return val;
+}
+
 #endif //ALGORITHMS_TRAINING_TESTCASE_COLLECTOR_H
