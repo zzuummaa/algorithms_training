@@ -1,4 +1,5 @@
 #include "testcase.h"
+#include <cstring>
 
 testcase_streams::operator bool() const {
 	return in && out;
