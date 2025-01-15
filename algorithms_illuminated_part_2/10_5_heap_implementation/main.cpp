@@ -76,12 +76,13 @@ private:
      * 2) jr = 2*i + 2
      * @link https://ru.wikipedia.org/wiki/%D0%94%D0%B2%D0%BE%D0%B8%D1%87%D0%BD%D0%B0%D1%8F_%D0%BA%D1%83%D1%87%D0%B0
      *
-     * 3) i = (jl - 1) / 2
-     * 4) i = (jr - 2) / 2
+     * 3) i = (jl - 1) / 2 из (1)
+     * 4) i = (jr - 2) / 2 из (2)
      *
      * 5) jr = jl + 1 из (1) и (2)
      * 6) jl % 2 = 1
      * 7) jr % 2 = 0
+     * @link https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Max-Heap.svg/800px-Max-Heap.svg.png
      *
      * 8) jr = jr + jr % 2 из (7)
      * 9) jr = jl + jl % 2 из (5) и (6)
