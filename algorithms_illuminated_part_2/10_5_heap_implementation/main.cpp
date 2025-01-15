@@ -1,153 +1,162 @@
-#include <iostream>
 #include <vector>
-#include <queue>
-#include <cassert>
+#include <iostream>
+#include <algorithm>
 #include <random>
-#include <chrono>
-#include <testcase_random.h>
+#include <cassert>
 
-template <typename T, typename Compare = std::less<>>
-class priority_queue {
-	std::vector<T> heap;
-	Compare comp;
-
-	typedef decltype(heap.begin()) iterator;
+class Heap {
 public:
+    void push(int val) {
+        _data.push_back(val);
 
-	iterator begin() {
-		return heap.begin();
-	}
+        size_t j = _data.size() - 1;
 
-	iterator end() {
-		return heap.end();
-	}
-	
-	void push(const T& v) {
-		heap.push_back(v);
-		if (heap.size() >= 3) {
-			for (size_t idx = heap.size() - 2; idx > 0; idx /= 2) {
-				if (comp(heap[idx / 2 + 1], heap[idx + 1])) {
-					std::swap(heap[idx + 1], heap[idx / 2 + 1]);
-				} else {
-					break;
-				}
-			}
-		}
+        while (j > 0) {
+            size_t i = parent_idx(j);
+            if (_data[i] > _data[j]) break;
 
-		if (heap.size() < 2) return;
-		if (comp(heap[0], heap[1])) std::swap(heap[1], heap[0]);
-		if (heap.size() < 3) return;
-		if (comp(heap[0], heap[2])) std::swap(heap[2], heap[0]);
-	}
+            std::swap(_data[i], _data[j]);
+            j = i;
+        }
+    }
 
-	void pop() {
-		if (heap.empty()) return;
-		if (heap.size() == 1) {
-			heap.clear();
-			return;
-		}
+    int pop() {
+        assert(!_data.empty());
 
-		heap[0] = heap.back();
-		heap.resize(heap.size() - 1);
+        int result = _data.front();
+        if (_data.size() > 1) _data.front() = _data.back();
+        _data.pop_back();
+        heapify(0);
 
-		if (heap.size() < 3) {
-			if (comp(heap[0], heap[1])) std::swap(heap[0], heap[1]);
-			return;
-		}
+        return result;
+    }
 
-		size_t idx;
-		if (comp(heap[2], heap[1])) {
-			if (comp(heap[0], heap[1])) {
-				std::swap(heap[0], heap[1]);
-				idx = 0;
-			} else {
-				return;
-			}
-		} else {
-			if (comp(heap[0], heap[2])) {
-				std::swap(heap[0], heap[2]);
-				idx = 1;
-			} else {
-				return;
-			}
-		}
+    size_t size() const {
+        return _data.size();
+    }
 
-		while (true) {
-			size_t lc_idx = (idx * 2);
-			if (lc_idx + 1 >= heap.size()) return;
+    size_t empty() const {
+        return _data.empty();
+    }
 
-			size_t rc_idx = (idx * 2) + 1;
-			if (rc_idx + 1 >= heap.size()) {
-				if (comp(heap[idx + 1], heap[rc_idx + 1])) std::swap(heap[rc_idx + 1], heap[idx + 1]);
-				return;
-			}
+    auto begin() {
+        return _data.begin();
+    }
 
-			if (comp(heap[rc_idx + 1], heap[lc_idx + 1])) {
-				if (comp(heap[idx + 1], heap[lc_idx + 1])) {
-					std::swap(heap[lc_idx + 1], heap[idx + 1]);
-					idx = lc_idx;
-				} else {
-					return;
-				}
-			} else {
-				if (comp(heap[idx + 1], heap[rc_idx + 1])) {
-					std::swap(heap[rc_idx + 1], heap[idx + 1]);
-					idx = rc_idx;
-				} else {
-					return;
-				}
-			}
-		}
-	}
+    auto end() {
+        return _data.end();
+    }
+private:
+    enum Direction {
+        LEFT,
+        RIGHT
+    };
 
-	T& top() {
-		return heap.front();
-	}
+    std::vector<int> _data;
 
-	bool empty() {
-		return heap.empty();
-	}
+    /*
+     * i - индекс родителя
+     * jl - индекс левого ребенка
+     * jr - индекс правого ребенка
+     *
+     * jl = 2 * i + 1
+     * jr = 2 * i + 2
+     * @link https://ru.wikipedia.org/wiki/%D0%94%D0%B2%D0%BE%D0%B8%D1%87%D0%BD%D0%B0%D1%8F_%D0%BA%D1%83%D1%87%D0%B0
+     */
+    static size_t child_idx(size_t i, Direction direction) {
+        return 2 * i + 1 + static_cast<int>(direction);
+    }
+
+    /*
+     * i - индекс родителя
+     * jl - индекс левого ребенка
+     * jr - индекс правого ребенка
+     *
+     * 1) jl = 2*i + 1
+     * 2) jr = 2*i + 2
+     * @link https://ru.wikipedia.org/wiki/%D0%94%D0%B2%D0%BE%D0%B8%D1%87%D0%BD%D0%B0%D1%8F_%D0%BA%D1%83%D1%87%D0%B0
+     *
+     * 3) i = (jl - 1) / 2
+     * 4) i = (jr - 2) / 2
+     *
+     * 5) jr = jl + 1 из (1) и (2)
+     * 6) jl % 2 = 1
+     * 7) jr % 2 = 0
+     *
+     * 8) jr = jr + jr % 2 из (7)
+     * 9) jr = jl + jl % 2 из (5) и (6)
+     * 10) j + j % 2 = (jr + jr % 2) || (jl + jl % 2)
+     *
+     * 11) i = (j + j % 2 - 2) / 2
+     */
+    static size_t parent_idx(size_t j) {
+        assert(j > 0);
+        return (j + j % 2 - 2) / 2;
+    }
+
+    void heapify(size_t i) {
+        while (true) {
+            size_t largest = i;
+            size_t jl = child_idx(i, LEFT);
+            size_t jr = child_idx(i, RIGHT);
+
+            if (jl < _data.size() && _data[jl] > _data[largest]) largest = jl;
+            if (jr < _data.size() && _data[jr] > _data[largest]) largest = jr;
+
+            if (i == largest) break;
+
+            std::swap(_data[i], _data[largest]);
+            i = largest;
+        }
+    }
 };
 
-template<typename Container>
-bool test_priority_queue(const Container& container) {
-	typedef typename std::remove_const<typename std::remove_reference<decltype(container.front())>::type>::type queue_type;
-	std::priority_queue<queue_type, std::vector<queue_type>> ref_queue;
-	priority_queue<queue_type> queue;
+enum Operation {
+    PUSH,
+    POP
+};
 
-	for (auto it: container) {
-		ref_queue.push(it);
-		queue.push(it);
-		if (ref_queue.top() != queue.top()) {
-			std::cout << "not eq on push" << std::endl;
-			return false;
-		}
-	}
+void test(Heap& heap, std::vector<int>& expected_heap, Operation op, int val = 0)
+{
+    int expected_val;
+    switch (op) {
+        case PUSH:
+            std::cout << "push " << val << std::endl;
 
-	while (!ref_queue.empty() && !queue.empty()) {
-		if (ref_queue.top() != queue.top()) {
-			std::cout << "not eq on pop" << std::endl;
-			return false;
-		}
-		ref_queue.pop();
-		queue.pop();
-	}
+            heap.push(val);
+            assert(std::is_heap(std::begin(heap), std::end(heap)) && "pop");
 
-	if (!ref_queue.empty() || !queue.empty()) {
-		std::cout << "queue sizes not eq" << std::endl;
-	}
+            expected_heap.push_back(val);
+            std::push_heap(std::begin(expected_heap), std::end(expected_heap));
+            break;
+        case POP:
+            val = heap.pop();
+            assert(std::is_heap(std::begin(heap), std::end(heap)) && "pop");
 
-	return true;
+            expected_val = expected_heap.front();
+            std::pop_heap(std::begin(expected_heap), std::end(expected_heap));
+            expected_heap.pop_back();
+
+            std::cout << "pop actual " << val << " vs expected " << expected_val << std::endl;
+            assert(val == expected_val && "pop");
+            break;
+    }
 }
 
 int main() {
-	assert(test_priority_queue(std::vector<int> { 0, 1 }));
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> val_distrib(0, 100);
+        std::uniform_int_distribution<> operation_distrib(0, 1);
 
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	std::default_random_engine gen(seed);
-	std::uniform_int_distribution<int> distrib;
-	for (size_t i = 1; i < 1000; i++) {
-		auto test_case = random_vector<int>(i);
-		assert(test_priority_queue(test_case));
-	}
+        Heap heap;
+        std::vector<int> expected_heap;
+        for (size_t i = 0; i < 1'000'000; ++i) {
+            Operation op = heap.empty() ? PUSH : static_cast<Operation>(operation_distrib(gen));
+            test(heap, expected_heap, op, val_distrib(gen));
+        }
+    }
+
+    return 0;
 }
