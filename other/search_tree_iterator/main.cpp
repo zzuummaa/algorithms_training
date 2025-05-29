@@ -9,7 +9,7 @@
 // Предположим, Ваше решение будет использоваться сторонними разработчиками.
 
 //         7
-//    4        12
+//     4        12
 //  1     6  10    13
 //0   2 5
 
@@ -25,15 +25,16 @@
 #include <optional>
 
 struct Node {
-	Node* up;
-	Node* left;
-	Node* right;
+	Node *up;
+	Node *left;
+	Node *right;
 
 	int value;
 };
 
-struct TreeWalker {
-	static Node* stepLeft(Node* cur)
+struct TreeUtil {
+	// шагаем влево, пока нода не окажется листом
+	static Node *stepLeft(Node *cur)
 	{
 		while (cur && cur->left) {
 			cur = cur->left;
@@ -43,18 +44,20 @@ struct TreeWalker {
 	}
 
 	// шагаем вверх, пока не окажемся левым поддеревом
-	static Node* stepUp(Node* cur) {
-		if (!cur) return nullptr;
+	static Node *stepUp(Node *cur)
+	{
+		assert(cur);
 
-		Node* prev;
+		Node *prev;
 		do {
-			stepTo(cur->up, &cur, &prev);
-		} while (cur || cur->left != prev);
+			prev = cur;
+			cur = cur->up;
+		} while (cur && cur->left != prev);
 
 		return cur;
 	}
 
-	static void replaceChild(Node* parent, Node* child, Node* new_child)
+	static void replaceChild(Node *parent, Node *child, Node *new_child)
 	{
 		if (parent->left == child) {
 			parent->left = new_child;
@@ -68,11 +71,78 @@ struct TreeWalker {
 			new_child->up = parent;
 		}
 	}
+};
 
-private:
-	static void stepTo(Node* next, Node** cur, Node** prev) {
-		*prev = *cur;
-		*cur = next;
+struct SearchTreeUtil {
+	static Node *next(Node *node)
+	{
+		// Шагнуть вправо
+		//  искать левый лист
+		// иначе
+		//  шагать вверх пока не станем левым поддеревом
+		assert(node);
+		if (node->right) {
+			node = TreeUtil::stepLeft(node->right);
+		} else {
+			node = TreeUtil::stepUp(node);
+		}
+		return node;
+	}
+
+	static Node *extract(Node *root, Node *node)
+	{
+		struct NodeFinalizer {
+			Node *node;
+
+			~NodeFinalizer()
+			{
+				node->left = nullptr;
+				node->right = nullptr;
+			}
+		};
+		NodeFinalizer finalizer{node};
+
+		// Нода является листом, просто ее удаляем
+		if (!node->left && !node->right) {
+			// Нода является вершиной
+			if (!node->up) {
+				return nullptr;
+			}
+
+			TreeUtil::replaceChild(node->up, node, node->right);
+			return root;
+		}
+
+		if (node->left && node->right) {
+			Node *successor = TreeUtil::stepLeft(node->right);
+			assert(!successor->left);
+
+			// Если преемник не является потомком удаляемого узла, то отсоединяем его от других узлов
+			if (successor != node->right) {
+				TreeUtil::replaceChild(successor->up, successor, successor->right);
+				TreeUtil::replaceChild(successor, successor->right, node->right);
+			}
+
+			// Заменяем удаляемый узел на преемника
+			TreeUtil::replaceChild(successor, successor->left, node->left);
+			if (node->up) {
+				TreeUtil::replaceChild(node->up, node, successor);
+			} else {
+				root = successor;
+			}
+
+			return root;
+		}
+
+
+		Node *child = node->left ? node->left : node->right;
+		if (!node->up) {
+			child->up = nullptr;
+			return child;
+		}
+
+		TreeUtil::replaceChild(node->up, node, child);
+		return root;
 	}
 };
 
@@ -82,9 +152,9 @@ struct TreeIterator : std::forward_iterator_tag {
 
 	TreeIterator() = default;
 
-	explicit TreeIterator(Node* node) : _node(node) {}
+	explicit TreeIterator(Node *node) : _node(node){}
 
-	Node* node() const
+	Node *node() const
 	{
 		return _node;
 	}
@@ -94,9 +164,9 @@ struct TreeIterator : std::forward_iterator_tag {
 		return _node->value;
 	}
 
-	TreeIterator& operator++()
+	TreeIterator &operator++()
 	{
-		inc();
+		_node = SearchTreeUtil::next(_node);
 		return *this;
 	}
 
@@ -107,48 +177,58 @@ struct TreeIterator : std::forward_iterator_tag {
 		return tmp;
 	}
 
-	bool operator==(const TreeIterator& other) const
+	bool operator==(const TreeIterator &other) const
 	{
 		return this->_node == other._node;
 	}
-private:
-	Node* _node;
 
-	void step(Node* next, Node** prev) {
+private:
+	Node *_node;
+
+	void step(Node *next, Node **prev)
+	{
 		*prev = _node;
 		_node = next;
 	}
-
-	void inc() {
-		// Шагнуть вправо
-		//  искать левый лист
-		// иначе
-		//  шагать вверх пока не станем левым поддеревом
-		if (_node->right) {
-			step(_node->right);
-
-		}
-		else stepUp();
-	}
 };
+
 static_assert(std::forward_iterator<TreeIterator>);
 
 class Tree {
 public:
 	using iterator = TreeIterator;
 
-	explicit Tree(Node* root) : _root(root) {}
+	explicit Tree(Node *root) : _root(root) {}
+
+	Tree(const Tree &other) = delete;
+	Tree& operator=(const Tree &other) = delete;
+
+	Tree(Tree &&other) noexcept
+	{
+		_root = other._root;
+		other._root = nullptr;
+	}
+
+	Tree& operator=(Tree &&other) noexcept
+	{
+		_root = other._root;
+		other._root = nullptr;
+		return *this;
+	}
 
 	~Tree()
 	{
-
+		iterator it = begin();
+		while (it != end()) {
+			it = erase(it);
+		}
 	}
 
 	iterator begin() const
 	{
 		// Находим самый левый элемент (_root, если левая ветвь пустая)
 		// Если _root == nullptr, в iterator передастся nullptr
-		return iterator(TreeWalker::stepLeft(_root));
+		return iterator(TreeUtil::stepLeft(_root));
 	}
 
 	iterator end() const
@@ -158,77 +238,38 @@ public:
 
 	iterator erase(iterator it)
 	{
-		struct NodeFinalizer {
-			Node* node;
-
-			~NodeFinalizer() {
-				// Зануляем для отладочных целей
-				node->left = nullptr;
-				node->right = nullptr;
-				node->value = 0;
-				delete node;
-			}
-		};
-
-		Node* node = it.node();
+		Node *node = it.node();
 		if (!node) return iterator(nullptr);
 		assert(node->up || _root == node);
 
 		iterator next = it;
 		++next;
 
-		NodeFinalizer finalizer{node};
+		_root = SearchTreeUtil::extract(_root, node);
+		delete node;
 
-		// Нода является листом, просто ее удаляем
-		if (!node->left && !node->right) {
-			// Нода является вершиной
-			if (!node->up) {
-				_root = nullptr;
-				return next;
-			}
-
-			TreeWalker::replaceChild(node->up, node, node->right);
-			return next;
-		}
-
-		if (node->left && node->right) {
-			Node* successor = TreeWalker::stepLeft(node->right);
-			assert(!successor->left);
-
-			// Если преемник не является потомком удаляемого узла, то отсоединяем его от других узлов
-			if (successor != node->right) {
-				TreeWalker::replaceChild(successor->up, successor, successor->right);
-				TreeWalker::replaceChild(successor, successor->right, node->right);
-			}
-
-			// Заменяем удаляемый узел на преемника
-			TreeWalker::replaceChild(successor, successor->left, node->left);
-			if (node->up) {
-				TreeWalker::replaceChild(node->up, node, successor);
-			} else {
-				_root = successor;
-			}
-
-			return next;
-		}
-
-
-		Node* child = node->left ? node->left : node->right;
-		if (!node->up) {
-			_root = child;
-			return next;
-		}
-
-		TreeWalker::replaceChild(node->up, node, child);
 		return next;
 	}
 
 private:
-	Node* _root;
+	Node *_root;
 };
 
 inline constexpr std::nullopt_t X = std::nullopt;
-using NodeBuildInfo = std::optional<int>;
+
+struct NodeBuildInfo : std::optional<int> {
+	using std::optional<int>::optional;
+};
+
+std::ostream &operator<<(std::ostream &os, const NodeBuildInfo &info)
+{
+	if (info.has_value()) {
+		os << info.value();
+	} else {
+		os << "X";
+	}
+	return os;
+}
 
 /**
  * Создает дерево из вектора информации о топологии дерева.
@@ -238,7 +279,7 @@ using NodeBuildInfo = std::optional<int>;
  *       1,   2 - левый и правый потомки вершины
  *     3, 4, 5, 6 - и т.д.
  */
-std::optional<Tree> build_tree(const std::vector<NodeBuildInfo>& nodes)
+std::optional<Tree> build_tree(const std::vector<NodeBuildInfo> &nodes)
 {
 	if (nodes.empty() || !nodes[0].has_value()) {
 		return Tree{nullptr};
@@ -246,26 +287,31 @@ std::optional<Tree> build_tree(const std::vector<NodeBuildInfo>& nodes)
 
 	// Создаем вектор указателей на узлы
 	std::vector<Node*> tree_nodes(nodes.size(), nullptr);
+	tree_nodes[0] = new Node{nullptr, nullptr, nullptr, nodes[0].value()};
 
 	// Создаем узлы для всех существующих значений
-	for (size_t i = 0; i < nodes.size(); ++i) {
+	for (size_t i = 1; i < nodes.size(); ++i) {
 		if (nodes[i].has_value()) {
 			size_t up_idx = (i - 1) / 2;
-			bool is_left = (i % 2) == 0;
+			bool is_left = (i % 2) == 1;
 
-			Node* up = tree_nodes[up_idx];
-			if (!up) {
+			Node *up_node = tree_nodes[up_idx];
+			if (!up_node) {
 				std::cout << "build tree failed: up_idx = " << up_idx << ", i = " << i << ", nodes = {";
-				std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<int>(std::cout, ", "));
+				std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
 				std::cout << "}" << std::endl;
+
+				// Создаем дерево для деаллокации нод
+				if (up_idx) Tree{tree_nodes[0]};
+
 				return std::nullopt;
 			}
 
-			tree_nodes[i] = new Node{tree_nodes[up_idx], nullptr, nullptr, nodes[i].value()};
+			tree_nodes[i] = new Node{up_node, nullptr, nullptr, nodes[i].value()};
 			if (is_left) {
-				tree_nodes[up_idx]->left = tree_nodes[i];
+				up_node->left = tree_nodes[i];
 			} else {
-				tree_nodes[up_idx]->right = tree_nodes[i];
+				up_node->right = tree_nodes[i];
 			}
 		}
 	}
@@ -273,7 +319,7 @@ std::optional<Tree> build_tree(const std::vector<NodeBuildInfo>& nodes)
 	return Tree{tree_nodes[0]};
 }
 
-void test(const std::vector<NodeBuildInfo>& nodes, bool expect_is_valid_search_tree)
+void test(const std::vector<NodeBuildInfo> &nodes, bool expect_is_valid_search_tree)
 {
 	std::optional<Tree> search_tree = build_tree(nodes);
 	if (!search_tree) {
@@ -284,13 +330,24 @@ void test(const std::vector<NodeBuildInfo>& nodes, bool expect_is_valid_search_t
 
 	if (is_valid_search_tree != expect_is_valid_search_tree) {
 		std::cout << "test failed: is_valid_search_tree = " << is_valid_search_tree
-			<< ", expected = " << expect_is_valid_search_tree << ", nodes = {";
-		std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<int>(std::cout, ", "));
+				<< ", expected = " << expect_is_valid_search_tree << ", nodes = {";
+		std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
 		std::cout << "}" << std::endl;
+	} else {
+		// std::cout << "test passed: is_valid_search_tree = " << is_valid_search_tree
+		// 		<< ", expected = " << expect_is_valid_search_tree << ", nodes = {";
+		// std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
+		// std::cout << "}" << std::endl;
 	}
 }
 
 int main()
 {
 	test({ }, true);
+	test({ 1 }, true);
+	test({1, 2}, false);
+	test({2, 1}, true);
+	test({2, 1, 3}, true);
+	test({2, X, 3}, true);
+	test({2, 3, X}, false);
 }
