@@ -74,6 +74,12 @@ struct TreeUtil {
 };
 
 struct SearchTreeUtil {
+	/**
+	 * Функция для обхода дерева
+	 *
+	 * @param node текущий узел
+	 * @return следующий узел
+	 */
 	static Node *next(Node *node)
 	{
 		// Шагнуть вправо
@@ -89,6 +95,13 @@ struct SearchTreeUtil {
 		return node;
 	}
 
+	/**
+	 * Отсоединяет узел от дерева, при этом сохраняет свойства дерева поиска.
+	 *
+	 * @param root вершина дерева
+	 * @param node узел для извлечения из дерева
+	 * @return новая вершина дерева
+	 */
 	static Node *extract(Node *root, Node *node)
 	{
 		struct NodeFinalizer {
@@ -96,6 +109,7 @@ struct SearchTreeUtil {
 
 			~NodeFinalizer()
 			{
+				node->up = nullptr;
 				node->left = nullptr;
 				node->right = nullptr;
 			}
@@ -236,6 +250,8 @@ public:
 		return iterator(nullptr);
 	}
 
+	// Удаляет элемент по итератору и возвращает следующий элемент
+	// Пришлось реализовывать из-за необходимости деалоцировать ноды дерева
 	iterator erase(iterator it)
 	{
 		Node *node = it.node();
@@ -274,7 +290,7 @@ std::ostream &operator<<(std::ostream &os, const NodeBuildInfo &info)
 /**
  * Создает дерево из вектора информации о топологии дерева.
  *
- * @param nodes содержит информацию о топологии дерева. Индекс вектора указывает на расположение элемента в дереве:
+ * @param nodes содержит информацию о топологии дерева. Индекс вектора nodes указывает на расположение элемента в дереве:
  *		    0 - вершина дерева
  *       1,   2 - левый и правый потомки вершины
  *     3, 4, 5, 6 - и т.д.
@@ -334,20 +350,40 @@ void test(const std::vector<NodeBuildInfo> &nodes, bool expect_is_valid_search_t
 		std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
 		std::cout << "}" << std::endl;
 	} else {
-		// std::cout << "test passed: is_valid_search_tree = " << is_valid_search_tree
-		// 		<< ", expected = " << expect_is_valid_search_tree << ", nodes = {";
-		// std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
-		// std::cout << "}" << std::endl;
+		std::cout << "test passed: is_valid_search_tree = " << is_valid_search_tree
+				<< ", expected = " << expect_is_valid_search_tree << ", nodes = {";
+		std::copy(std::begin(nodes), std::end(nodes), std::ostream_iterator<NodeBuildInfo>(std::cout, ", "));
+		std::cout << "}" << std::endl;
 	}
 }
 
 int main()
 {
-	test({ }, true);
-	test({ 1 }, true);
-	test({1, 2}, false);
-	test({2, 1}, true);
-	test({2, 1, 3}, true);
-	test({2, X, 3}, true);
-	test({2, 3, X}, false);
+	// Базовые случаи
+	test({ }, true);                    // Пустое дерево
+	test({ 1 }, true);                  // Дерево из одного элемента
+
+	// Простые деревья из 2-х элементов
+	test({1, 2}, false);               // Нарушение - левый больше корня
+	test({2, 1}, true);                // Корректное дерево
+	test({1, X, 2}, true);             // Корректное дерево
+
+	// Деревья из 3-х элементов
+	test({2, 1, 3}, true);             // Идеально сбалансированное
+	test({2, X, 3}, true);             // Только правое поддерево
+	test({2, 1, X}, true);             // Только левое поддерево
+	test({2, 3, X}, false);            // Нарушение - левый больше корня
+
+	// Более сложные случаи
+	test({5, 3, 7, 1, 4, 6, 8}, true); // Полное дерево
+	test({5, 3, 7, 4, 2, 8, 6}, false); // Нарушение - 4 больше 3
+	test({4, 2, 6, 1, 3, 5, 7}, true);  // Корректное полное дерево
+
+	// Несбалансированные, но корректные деревья
+	test({5, 4, 6, 3, X, X, 7}, true);
+	test({5, 3, 7, 2, 4, X, 8, 1}, true);
+
+	// Деревья с нарушениями
+	test({5, 3, 7, 2, 6, 4, 8}, false); // 6 в левом поддереве от 5
+	test({5, 2, 8, 1, 3, 6, 9, X, X, 4}, false); // 4 нарушает свойства
 }
