@@ -7,7 +7,7 @@ class split_iterator
 {
 public:
 	split_iterator() : pos(std::string_view::npos), finally(true) {}
-	split_iterator (std::string_view s, char c) : str(s), delimiter(c)
+	split_iterator (const std::string_view s, const char c) : str(s), delimiter(c)
 	{
 		if (s.empty()) {
 			pos = std::string_view::npos;
@@ -52,19 +52,19 @@ private:
 		pos = next == std::string_view::npos ? std::string_view::npos : next + 1;
 	}
 
+	// Строка, которую нужно разбить.
+	const std::string_view str;
+
+	// Разделитель строки.
+	const char delimiter = '\0';
+
 	// Указывает на начало следующей подстроки (следующий символ после разделителя), либо std::string_view::npos,
 	// если строка кончилась. Если последний элемент пустой (например "ac,"), то при обработке предпоследнего элемента
 	// будет равен str.size().
 	size_t pos;
 
-	// Строка, которую нужно разбить.
-	std::string_view str;
-
 	// Подстрока на текущем шаге итератора.
 	std::string_view curr;
-
-	// Разделитель строки.
-	char delimiter = '\0';
 
 	// Флаг, указывающий, что итератор достиг конца строки. При обработке последнего элемента pos становится равным
 	// std::string_view::npos. Возникает двусмысленность: либо достигнут конец строки, либо обрабатывается последний
