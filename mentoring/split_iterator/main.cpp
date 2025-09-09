@@ -46,9 +46,14 @@ public:
 private:
 	void next()
 	{
+		// Находим конец текущей подстроки.
 		size_t next = str.find(delimiter, pos);
+
+		// Вычисляем текущую подстроку.
 		size_t end = next == std::string_view::npos ? str.size() : next;
 		curr = str.substr(pos, end - pos);
+
+		// Вычисляем начало следующей подстроки.
 		pos = next == std::string_view::npos ? std::string_view::npos : next + 1;
 	}
 
