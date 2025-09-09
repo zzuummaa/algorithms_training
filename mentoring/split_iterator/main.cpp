@@ -6,15 +6,15 @@
 class split_iterator
 {
 public:
-	split_iterator() : pos(std::string_view::npos), finaly(true) {}
-	split_iterator (std::string_view s, char c) : str(s), ch(c)
+	split_iterator() : pos(std::string_view::npos), finally(true) {}
+	split_iterator (std::string_view s, char c) : str(s), delimiter(c)
 	{
 		if (s.empty()) {
 			pos = std::string_view::npos;
-			finaly = true;
+			finally = true;
 		} else {
 			pos = 0;
-			finaly = false;
+			finally = false;
 			next();
 		}
 	}
@@ -22,7 +22,7 @@ public:
 	split_iterator& operator++()
 	{
 		if (pos == std::string_view::npos) {
-			finaly = true;
+			finally = true;
 			return *this;
 		}
 		next();
@@ -34,40 +34,51 @@ public:
 		return curr;
 	}
 
-	bool operator==(const split_iterator& other) const {
-		if (this->finaly == other.finaly) return true;
-		if (str.data() == other.str.data() && str.size() == other.str.size()) return pos == other.pos;
-		return false;
+	bool operator==(const std::default_sentinel_t&) const
+	{
+		return finally;
 	}
 
-	bool operator!=(const split_iterator& other) const {
+	bool operator!=(const std::default_sentinel_t& other) const {
 		return !(*this == other);
 	}
 
 private:
 	void next()
 	{
-		size_t next = str.find(ch, pos);
+		size_t next = str.find(delimiter, pos);
 		size_t end = next == std::string_view::npos ? str.size() : next;
 		curr = str.substr(pos, end - pos);
 		pos = next == std::string_view::npos ? std::string_view::npos : next + 1;
 	}
 
+	// Указывает на начало следующей подстроки (следующий символ после разделителя), либо std::string_view::npos,
+	// если строка кончилась. Если последний элемент пустой (например "ac,"), то при обработке предпоследнего элемента
+	// будет равен str.size().
 	size_t pos;
+
+	// Строка, которую нужно разбить.
 	std::string_view str;
+
+	// Подстрока на текущем шаге итератора.
 	std::string_view curr;
-	char ch = '\0';
-	bool finaly;
+
+	// Разделитель строки.
+	char delimiter = '\0';
+
+	// Флаг, указывающий, что итератор достиг конца строки. При обработке последнего элемента pos становится равным
+	// std::string_view::npos. Возникает двусмысленность: либо достигнут конец строки, либо обрабатывается последний
+	// элемент. Данный флаг позволяет различать эти два случая.
+	bool finally;
 };
 
 bool test(std::string_view input, std::string_view expected_output)
 {
 	split_iterator g (input, ',');
-	split_iterator end{};
 
 	std::stringstream ss;
 	ss << "[";
-	for (; g != end; ++g)
+	for (; g != std::default_sentinel; ++g)
 		ss << "\"" << *g << "\",";
 	if (ss.view().back() != '[') ss.seekp(-1, std::ios_base::cur);
 	ss << "]";
