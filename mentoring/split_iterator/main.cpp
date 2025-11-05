@@ -82,26 +82,27 @@ bool test(std::string_view input, std::string_view expected_output)
 	split_iterator g (input, ',');
 
 	std::stringstream ss;
-	ss << "[";
-	for (; g != std::default_sentinel; ++g)
-		ss << "\"" << *g << "\",";
-	if (ss.view().back() != '[') ss.seekp(-1, std::ios_base::cur);
-	ss << "]";
-
+	for (; g != std::default_sentinel; ++g) {
+		ss << "[" << *g << "]";
+	}
 	std::string actual_output = ss.str();
+
 	return actual_output == expected_output;
 }
 
 int main()
 {
-	assert(test("", R"([])"));
-	assert(test("a,b", R"(["a","b"])"));
-	assert(test("a,b,c,", R"(["a","b","c",""])"));
-	assert(test("a,,b,", R"(["a","","b",""])"));
-	assert(test("a,,b,,c,", R"(["a","","b","","c",""])"));
-	assert(test("abc", R"(["abc"])"));
-	assert(test("abc,a", R"(["abc","a"])"));
-	assert(test("ac,abc,de", R"(["ac","abc","de"])"));
+	assert(test("", ""));
+	assert(test("a", "[a]"));
+	assert(test("a,", "[a][]"));
+	assert(test(",a", "[][a]"));
+	assert(test("a,b", "[a][b]"));
+	assert(test("a,b,c,", "[a][b][c][]"));
+	assert(test("a,,b,", "[a][][b][]"));
+	assert(test("a,,b,,c,", "[a][][b][][c][]"));
+	assert(test("abc", "[abc]"));
+	assert(test("abc,a", "[abc][a]"));
+	assert(test("ac,abc,de", "[ac][abc][de]"));
 
 	return 0;
 }
