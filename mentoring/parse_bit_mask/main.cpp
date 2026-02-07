@@ -47,45 +47,6 @@ std::optional<size_t> parse_bit_mask(std::string_view str)
 	if (state == ParserState::FindNumber) return std::nullopt;
 
 	return result;
-
-	/*for (const char c: str) {
-		switch (state) {
-			case ParserState::FindNumber:
-				if (c == ' ') continue;
-				if (!std::isdigit(c)) return std::nullopt;
-				state = ParserState::ParseNumber;
-				break;
-			case ParserState::ParseNumber:
-				if (!std::isdigit(c)) {
-					if (bit == 0) return std::nullopt;
-
-					result |= 1ULL << bit;
-					bit = 0;
-
-
-				}
-				if (c == ' ') {
-					state = ParserState::FindComa;
-					continue;
-				}
-				if (c == ',') {
-					state = ParserState::FindNumber;
-					continue;
-				}
-				if (!std::isdigit(c)) return std::nullopt;
-				break;
-			case ParserState::FindComa:
-				if (c == ' ') continue;
-				if (c == ',') {
-					state = ParserState::FindNumber;
-					continue;
-				}
-				return std::nullopt;
-		}
-
-		bit = bit * 10 + (c - '0' - 1);
-		if (bit > 64) return std::nullopt;
-	}*/
 }
 
 int main()
