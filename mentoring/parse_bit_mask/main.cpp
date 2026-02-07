@@ -1,0 +1,109 @@
+#include <cassert>
+#include <cctype>
+#include <optional>
+#include <string>
+#include <string_view>
+
+std::optional<size_t> parse_bit_mask(std::string_view str)
+{
+	if (str.empty()) return 0;
+
+	enum class ParserState {
+		FindNumber,
+		FindComa,
+	};
+
+	ParserState state{};
+
+	size_t result = 0;
+
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str[i] == ' ') continue;
+
+		if (state == ParserState::FindNumber && std::isdigit(str[i])) {
+			int bit = 0;
+			while (std::isdigit(str[i]) && i < str.size()) {
+				bit = bit * 10 + (str[i] - '0');
+				if (bit > 64) return std::nullopt;
+				++i;
+			}
+			--i;
+
+			if (bit == 0) return std::nullopt;
+			result |= 1ULL << (bit - 1);
+			state = ParserState::FindComa;
+
+			continue;
+		}
+
+		if (state == ParserState::FindComa && str[i] == ',') {
+			state = ParserState::FindNumber;
+			continue;
+		}
+
+		return std::nullopt;
+	}
+
+	if (state == ParserState::FindNumber) return std::nullopt;
+
+	return result;
+
+	/*for (const char c: str) {
+		switch (state) {
+			case ParserState::FindNumber:
+				if (c == ' ') continue;
+				if (!std::isdigit(c)) return std::nullopt;
+				state = ParserState::ParseNumber;
+				break;
+			case ParserState::ParseNumber:
+				if (!std::isdigit(c)) {
+					if (bit == 0) return std::nullopt;
+
+					result |= 1ULL << bit;
+					bit = 0;
+
+
+				}
+				if (c == ' ') {
+					state = ParserState::FindComa;
+					continue;
+				}
+				if (c == ',') {
+					state = ParserState::FindNumber;
+					continue;
+				}
+				if (!std::isdigit(c)) return std::nullopt;
+				break;
+			case ParserState::FindComa:
+				if (c == ' ') continue;
+				if (c == ',') {
+					state = ParserState::FindNumber;
+					continue;
+				}
+				return std::nullopt;
+		}
+
+		bit = bit * 10 + (c - '0' - 1);
+		if (bit > 64) return std::nullopt;
+	}*/
+}
+
+int main()
+{
+	assert(parse_bit_mask("") == 0);
+
+	assert(parse_bit_mask("1") == 1ULL << 0);
+	assert(parse_bit_mask("64") == 1ULL << 63);
+	assert(parse_bit_mask(",") == std::nullopt);
+	assert(parse_bit_mask("65") == std::nullopt);
+	assert(parse_bit_mask("999") == std::nullopt);
+
+	assert(parse_bit_mask("1,") == std::nullopt);
+	assert(parse_bit_mask(",1") == std::nullopt);
+	assert(parse_bit_mask(",65") == std::nullopt);
+	assert(parse_bit_mask("65,") == std::nullopt);
+
+	assert(parse_bit_mask("1,1") == 1ULL << 0);
+	assert(parse_bit_mask("1,2") == 1ULL << 0 | 1ULL << 1);
+	assert(parse_bit_mask("2,1") == 1ULL << 0 | 1ULL << 1);
+}
