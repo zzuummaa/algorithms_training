@@ -44,7 +44,7 @@ std::optional<size_t> parse_bit_mask(std::string_view str)
 		return std::nullopt;
 	}
 
-	if (state == ParserState::FindNumber) return std::nullopt;
+	if (state == ParserState::FindNumber && result != 0) return std::nullopt;
 
 	return result;
 }
@@ -58,6 +58,7 @@ int main()
 	assert(parse_bit_mask(",") == std::nullopt);
 	assert(parse_bit_mask("65") == std::nullopt);
 	assert(parse_bit_mask("999") == std::nullopt);
+	assert(parse_bit_mask("999999999999999999999999999999999") == std::nullopt);
 
 	assert(parse_bit_mask("1,") == std::nullopt);
 	assert(parse_bit_mask(",1") == std::nullopt);
@@ -67,4 +68,15 @@ int main()
 	assert(parse_bit_mask("1,1") == 1ULL << 0);
 	assert(parse_bit_mask("1,2") == 1ULL << 0 | 1ULL << 1);
 	assert(parse_bit_mask("2,1") == 1ULL << 0 | 1ULL << 1);
+
+	assert(parse_bit_mask(" ") == 0);
+
+	assert(parse_bit_mask(" 1") == 1ULL << 0);
+	assert(parse_bit_mask("1 ") == 1ULL << 0);
+
+	assert(parse_bit_mask(" 1,20") == 1ULL << 0 | 1ULL << 19);
+	assert(parse_bit_mask("1 ,20") == 1ULL << 0 | 1ULL << 19);
+	assert(parse_bit_mask("1, 20") == 1ULL << 0 | 1ULL << 19);
+	assert(parse_bit_mask("1,20 ") == 1ULL << 0 | 1ULL << 19);
+
 }
